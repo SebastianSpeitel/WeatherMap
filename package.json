@@ -5,5 +5,8 @@
   "main": "app.js",
   "author": {
     "name": "Sebastian"
+  },
+  "dependencies": {
+    "node-fetch": "^2.2.0"
   }
 }
