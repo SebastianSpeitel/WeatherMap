@@ -6,10 +6,19 @@ const api = new OWM({
     apiKeys: ['01f36d619f504e0c3cb4e5d759ddea6e', '9075ef9dc883280499c44f891a2d2d77', '4d3ac2bef472d9e0292107b5fa4592ff', '02a0553a3a2abee59faf576d4c93ff3a', '0e6f6583bc6917b91266ef7f69f9e0c3', 'e92ab83de1f613f3edb779bb4464708e', 'dba07699bb103b2f6eb8408ae79d2527', 'b7b6faeb5676f88d4e4601518b099b9d', 'b45cff4bd861482938039b62774cc0ac', '61c1d0531e5438d1847d59ff19716310', '132a560491db8742f4a8ab1c4d1d6f85', 'c5cfa032c69d991806c97ddd667a7b3c', '6e414016a58de60f116665b0306ec9f5', '427659fa11d014944d302734e230d9b9', 'ac532b30cbb7a851fd068088c7b0ff50', '1f5994e32468d5210cfa373171ef5009', '6354a8a61a80dc2fc378b52958a44d5a', 'c9748c3d8d3f4386a458d7bc91d502fe', '0b5ecc7354b6ffe2047bb11a2c20509a', '1cb509630c5397150c44a634c5f65f0f']
 });
 
-function readJSON(file, options = {}) {
+function readJSON(file, options = {}, fallback) {
     return new Promise(function (resolve, reject) {
         fs.readFile(file, options, (err, data) => {
-            return err ? reject(err) : resolve(Promise.resolve(JSON.parse(data)));
+            if (err) reject(err);
+            let json;
+            try {
+                json = JSON.parse(data);
+            } catch (e) {
+                if (fallback) resolve(fallback);
+                else reject(e);
+                return;
+            }
+            resolve(json);
         });
     });
 }
@@ -46,34 +55,56 @@ const loadedWeatherData = {
         if (arr.length === 1) this.data.set(data.id, arr);
         this.save();
     },
-    load: async function () {
-        return readJSON('./weatherData.json')
-            .then(json => json.forEach(d => this.add(d)));
+    load: function () {
+        let p = readJSON('./weatherData.json', {}, [])
+            .then(json => json.forEach(d => this.add(WeatherData.fromJSON(d))));
+        p.then(() => {
+            this.loaded = true;
+            this.save();
+        });
+        return p;
     },
-    save: async function () {
+    save: function () {
+        if (this.saving || !this.loaded) return;
+        console.log('Saving loadedWeatherData');
         let json = [];
         this.data.forEach(arr => arr.forEach(d => json.push(d)));
-        writeJSON('./weatherData.json', json);
+        this.saving = setTimeout(() => this.saving = false, 1000);
+        return writeJSON('./weatherData.json', json).then(() => this.saving = false);
     }
 }
 module.exports.loaded = loadedWeatherData.load();
 
+let loadedSymbol = Symbol();
 class WeatherData {
     constructor(opt = {}) {
         this.id = opt.id;
-        if (opt.json) {
-            Object.assign(this, opt.json);
-            loadedWeatherData.add(this);
-        }
-        else if (opt.fromAPI) {
-            api
-                .weather({ id: this.id })
-                .then(json => {
-                    if (json.cod === 200) Object.assign(this, OWM.flatten(json, OWM.WEATHER));
-                    loadedWeatherData.add(this);
-                })
-                .catch(err => console.log('WeatherData couldn\'t load from API:' + err));
-        }
+        this[loadedSymbol] = (() => {
+            if (opt.json) {
+                Object.assign(this, opt.json);
+                loadedWeatherData.add(this);
+                return Promise.resolve(true);
+            }
+            else if (this.id && opt.fromAPI) {
+                return api
+                    .weather({ id: this.id })
+                    .then(json => {
+                        if (json.cod !== 200) throw 'Invalid API response';
+                        Object.assign(this, OWM.parse(json, OWM.WEATHER));
+                        loadedWeatherData.add(this);
+                        return true;
+                    })
+                    .catch(err => {
+                        console.log('WeatherData couldn\'t load from API:' + err);
+                        return false;
+                    });
+            }
+            return Promise.resolve(false);
+        })();
+    }
+
+    get loaded() {
+        return this[loadedSymbol];
     }
 
     static fromJSON(json) {
@@ -111,12 +142,36 @@ class WeatherData {
 }
 
 class Location {
-    constructor(id) {
+    constructor(id, opt = {}) {
         this.id = id;
-        this._currentWeather = WeatherData.fromID(this.id, Date.now() - 3600000);
+        this.maxage = opt.maxage || 3600000;
+        this._time = opt.time || 'now';
+        this.mode = opt.mode || '~';
+        this.loadWeather()
+            .then(loaded => {
+                if (!loaded || this._weather.time < this.time - this.maxage) {
+                    this._weather = WeatherData.fromID(this.id);
+                }
+            });
     }
-    get currentWeather() {
-        return this._currentWeather;
+
+    get time() {
+        return this._time === 'now' ? Date.now() : this._time;
+    }
+
+    loadWeather() {
+        let w = WeatherData.fromID(this.id, this.time, this.mode);
+        if (!this._weather) this._weather = w;
+        return w.loaded.then(loaded => {
+            if (loaded) this._weather = w;
+            return loaded;
+        });
+    }
+
+    weather(time = Date.now(), mode = '~') {
+        if (this._weather.time < this.time - this.maxage)
+            this.loadWeather();
+        return this._weather;
     }
 }
 
