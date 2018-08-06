@@ -53,11 +53,16 @@ const loadedWeatherData = {
         let arr = this.data.get(data.id) || [];
         arr.push(data);
         if (arr.length === 1) this.data.set(data.id, arr);
-        this.save();
+        console.log(`Added 1 data point, now ${this.data.size} different IDs`);
+        if (this.loaded) this.save().catch(err => console.log(err));
     },
     load: function () {
+        this;
         let p = readJSON('./weatherData.json', {}, [])
-            .then(json => json.forEach(d => this.add(WeatherData.fromJSON(d))));
+            .then(json => {
+                json.forEach(d => WeatherData.fromJSON(d));
+                console.log(`Loaded ${json.length} data points.`);
+            });
         p.then(() => {
             this.loaded = true;
             this.save();
@@ -65,17 +70,25 @@ const loadedWeatherData = {
         return p;
     },
     save: function () {
-        if (this.saving || !this.loaded) return;
-        console.log('Saving loadedWeatherData');
+        if (this.retrySaving) clearTimeout(this.retrySaving);
+        if (this.saving) {
+            this.retrySaving = setTimeout(() => this.save(), 1000);
+            return Promise.reject('Already saving').catch(err => console.log(err));
+        }
+        if (!this.loaded) return Promise.reject('Not loaded yet').catch(err => console.log(err));
+        if (this.saving) clearTimeout(this.saving);
+        this.saving = setTimeout(() => this.saving = false, 1000);
         let json = [];
         this.data.forEach(arr => arr.forEach(d => json.push(d)));
-        this.saving = setTimeout(() => this.saving = false, 1000);
-        return writeJSON('./weatherData.json', json).then(() => this.saving = false);
+        writeJSON(`./backupData/weatherData${Math.floor(Date.now() / 1000)}.json`, json);
+        return writeJSON('./weatherData.json', json)
+            .then(() => this.saving = false)
+            .then(() => console.log(`Saved ${json.length} data points.`));
     }
 }
 module.exports.loaded = loadedWeatherData.load();
 
-let loadedSymbol = Symbol();
+let loadedSymbol = Symbol('loaded');
 class WeatherData {
     constructor(opt = {}) {
         this.id = opt.id;
@@ -150,13 +163,14 @@ class Location {
         this.loadWeather()
             .then(loaded => {
                 if (!loaded || this._weather.time < this.time - this.maxage) {
-                    this._weather = WeatherData.fromID(this.id);
+                    this._weather = WeatherData.fromID(this.id, this.time, '~');
                 }
             });
+        setInterval(() => this.loadWeather(), this.maxage);
     }
 
     get time() {
-        return this._time === 'now' ? Date.now() : this._time;
+        return (this._time === 'now' ? Date.now() : this._time) - (this.mode === '>>' ? this.maxage : 0);
     }
 
     loadWeather() {
@@ -169,9 +183,8 @@ class Location {
     }
 
     weather(time = Date.now(), mode = '~') {
-        if (this._weather.time < this.time - this.maxage)
-            this.loadWeather();
-        return this._weather;
+        if (this.time - time < 100 && this.mode === mode) return this._weather;
+        else return WeatherData.fromID(this.id, time, mode);
     }
 }
 

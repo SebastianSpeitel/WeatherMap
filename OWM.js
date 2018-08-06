@@ -15,7 +15,7 @@ class OWM {
     static get ALL() { return this.WEATHER + this.META + this.SUN; }
 
     static parse(json, types = this.ALL) {
-        let parsed = { id: json.id, time: json.dt };
+        let parsed = { id: json.id, time: json.dt * 1000 };
         if ((types & this.WEATHER) === this.WEATHER) {
             parsed.weather = json.weather[0].id;
             parsed.temp = json.main.temp;
@@ -42,9 +42,10 @@ class OWM {
     }
 
     get apiKey() {
-        if (this.apiKeyIndex)
+        if (typeof this.apiKeyIndex !== 'undefined')
             this.apiKeyIndex = (this.apiKeyIndex + 1) % this.apiKeys.length;
         else this.apiKeyIndex = 0;
+        console.log(`Used API-Key #${this.apiKeyIndex+1}/${this.apiKeys.length}`);
         return this.apiKeys[this.apiKeyIndex];
     }
 
