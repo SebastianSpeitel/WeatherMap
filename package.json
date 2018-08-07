@@ -1,12 +1,30 @@
 {
-  "name": "weather-map",
+  "name": "raspi-weathermap",
   "version": "0.0.0",
   "description": "WeatherMap",
   "main": "app.js",
+  "keywords": [
+    "openweathermap",
+    "raspberry",
+    "raspberrypi",
+    "raspberry pi",
+    "weather",
+    "LED",
+    "ws281x"
+  ],
+  "license": "MIT",
   "author": {
     "name": "Sebastian"
   },
   "dependencies": {
+    "chalk": "^2.4.1",
     "node-fetch": "^2.2.0"
+  },
+  "optionalDependencies": {
+    "rpi-ws281x-native": "latest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SebastianSpeitel/WeatherMap.git"
   }
 }
