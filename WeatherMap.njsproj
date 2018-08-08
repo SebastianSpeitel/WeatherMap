@@ -38,6 +38,9 @@
     <Compile Include="weatherData.js">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="weatherMap.js">
+      <SubType>Code</SubType>
+    </Compile>
     <Content Include="city.list.json" />
     <Content Include="package.json" />
     <Content Include="README.md" />
