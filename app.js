@@ -5,7 +5,12 @@ const apiKeys = ['01f36d619f504e0c3cb4e5d759ddea6e', '9075ef9dc883280499c44f891a
 
 weatherMap.setKeys(apiKeys);
 const locations = [707860, 2878044, 803611, 874652, 2347078, 2822542, 2896514];
-const map = new weatherMap.WeatherMap({ locs: locations });
+weatherMap.loaded.then(main);
 
-setInterval(() => map.render(), 1000);
+async function main() {
+    const map = new weatherMap.WeatherMap({ locs: locations });
+
+    setInterval(() => map.render(), 1000);
+    setTimeout(() => map.display(), 1000);
+}
 

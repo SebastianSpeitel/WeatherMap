@@ -7,12 +7,14 @@ const MetaData = wD.MetaData;
 module.exports.setKeys = function (apiKeys) {
     wD.setKeys(apiKeys);
 }
+module.exports.loaded = wD.loaded;
 
 class WeatherMap {
     constructor(opt = {}) {
         let locOpt = opt.locOpt || { mode: '>>' };
         this.locs = opt.locs ? opt.locs.map(id => new Location(id, locOpt)) : [];
-        this.leds = new LEDStrip(this.locs.length, true);
+        this.leds = new LEDStrip(this.locs.length, false);
+
     }
 
     render() {
@@ -23,6 +25,10 @@ class WeatherMap {
             this.leds.set(i, 0, 0, b);
         });
         this.leds.render();
+    }
+
+    display() {
+        this.locs.forEach(l => l.display());
     }
 }
 
@@ -68,6 +74,11 @@ class Location {
     weatherAt(time = Date.now(), mode = '~') {
         if (this.time - time < 100 && this.mode === mode) return this.weather;
         else return WeatherData.fromID(this.id, time, mode);
+    }
+
+    display() {
+        console.log(this.meta);
+        console.log(this.weather);
     }
 }
 

@@ -38,11 +38,12 @@ const loadedMetaData = {
     add: function (data) {
         if (!data.id) return;
         this.data.set(data.id, data);
+        if (this.loaded) this.save().catch(err => console.log(err));
     },
     load: function () {
         let p = readJSON('./metaData.json', {}, [])
             .then(json => {
-                json.forEach(d => this.add(new MetaData(d.id, d)));
+                json.forEach(d => this.add(new MetaData({ id: d.id, json: d })));
             });
         p.then(() => {
             this.loaded = true;
@@ -59,7 +60,7 @@ const loadedMetaData = {
         if (!this.loaded) return Promise.reject('metaData not loaded yet').catch(err => console.log(err));
         if (this.saving) clearTimeout(this.saving);
         this.saving = setTimeout(() => this.saving = false, 1000);
-        let json = Array.from(this.data.values);
+        let json = Array.from(this.data.values());
         writeJSON(`./backupData/metaData${Math.floor(Date.now() / 1000)}.json`, json);
         return writeJSON('./metaData.json', json)
             .then(() => this.saving = false)
@@ -74,13 +75,13 @@ class MetaData {
         else api
             .weather({ id: this.id })
             .then(json => {
-                Object.assign(this, json);
+                Object.assign(this, OWM.parse(json, OWM.META));
                 loadedMetaData.add(this);
             });
     }
 
     static fromID(id) {
-        return loadedMetaData.get(id) || new MetaData(id);
+        return loadedMetaData.get(id) || new MetaData({ id: id });
     }
 }
 
@@ -140,7 +141,7 @@ const loadedWeatherData = {
             .then(() => console.log(`Saved ${json.length} data points.`));
     }
 }
-module.exports.loaded = loadedWeatherData.load();
+module.exports.loaded = Promise.all([loadedWeatherData.load(), loadedMetaData.load()]);
 
 const loadedSymbol = Symbol('loaded');
 class WeatherData {

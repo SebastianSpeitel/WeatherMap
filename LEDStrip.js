@@ -3,7 +3,7 @@
 let ws281x;
 try {
     ws281x = require('rpi-ws281x-native');
-} catch (er) {
+} catch (e) {
     ws281x = null;
 }
 

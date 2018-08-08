@@ -17,7 +17,7 @@
     "ws281x"
   ],
   "license": "MIT",
-  "main": "app.js",
+  "main": "weatherMap.js",
   "name": "raspi-weathermap",
   "optionalDependencies": {
     "rpi-ws281x-native": "latest"
@@ -26,5 +26,5 @@
     "type": "git",
     "url": "https://github.com/SebastianSpeitel/WeatherMap.git"
   },
-  "version": "0.0.1"
+  "version": "0.0.2"
 }
