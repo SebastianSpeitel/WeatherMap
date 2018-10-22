@@ -29,6 +29,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="app.js" />
+    <Compile Include="cli.js">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="LEDStrip.js">
       <SubType>Code</SubType>
     </Compile>

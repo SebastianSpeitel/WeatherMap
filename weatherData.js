@@ -5,17 +5,22 @@ const { OWM } = require('./OWM.js');
 const api = new OWM();
 module.exports.setKeys = function (apiKeys) {
     api.apiKeys.push(...apiKeys);
-}
+};
 
 function readJSON(file, options = {}, fallback) {
     return new Promise(function (resolve, reject) {
         fs.readFile(file, options, (err, data) => {
-            if (err) reject(err);
+            if (err) {
+                if (typeof fallback !== 'undefined') resolve(fallback);
+                else reject(err);
+                return;
+            }
+
             let json;
             try {
                 json = JSON.parse(data);
             } catch (e) {
-                if (fallback) resolve(fallback);
+                if (typeof fallback !== 'undefined') resolve(fallback);
                 else reject(e);
                 return;
             }
@@ -66,7 +71,7 @@ const loadedMetaData = {
             .then(() => this.saving = false)
             .then(() => console.log(`Saved ${json.length} metaData points.`));
     }
-}
+};
 
 class MetaData {
     constructor(opt = {}) {
@@ -88,18 +93,18 @@ class MetaData {
 const loadedWeatherData = {
     data: new Map(),
     get: function (id, time, mode = '=') {
-        if (!this.data.has(id)) return undefined;
         let arr = this.data.get(id);
+        if (!arr) return undefined;
         switch (mode) {
             case '~': return arr.sort((a, b) => Math.abs(a.time - time) - Math.abs(b.time - time))[0];
             case '<<': {
                 let oldest = arr.sort((a, b) => a.time - b.time)[0];
-                return (!time || oldest.time < time) ? oldest : undefined;
-            };
+                return !time || oldest.time < time ? oldest : undefined;
+            }
             case '>>': {
                 let newest = arr.sort((a, b) => b.time - a.time)[0];
-                return (!time || newest.time > time) ? newest : undefined;
-            };
+                return !time || newest.time > time ? newest : undefined;
+            }
             case '=': return arr.find(d => d.time === time);
             default: return arr.find(d => d.time === time);
         }
@@ -109,7 +114,7 @@ const loadedWeatherData = {
         let arr = this.data.get(data.id) || [];
         arr.push(data);
         if (arr.length === 1) this.data.set(data.id, arr);
-        console.log(`Added 1 data point, now ${this.data.size} different IDs`);
+        console.log(`Added 1 weatherData point, now ${this.data.size} different IDs`);
         if (this.loaded) this.save().catch(err => console.log(err));
     },
     load: function () {
@@ -140,7 +145,7 @@ const loadedWeatherData = {
             .then(() => this.saving = false)
             .then(() => console.log(`Saved ${json.length} data points.`));
     }
-}
+};
 module.exports.loaded = Promise.all([loadedWeatherData.load(), loadedMetaData.load()]);
 
 const loadedSymbol = Symbol('loaded');
@@ -158,7 +163,7 @@ class WeatherData {
                     .weather({ id: this.id })
                     .then(json => {
                         if (json.cod !== 200) throw 'Invalid API response';
-                        Object.assign(this, OWM.parse(json, OWM.WEATHER));
+                        Object.assign(this, OWM.parse(json, OWM.WEATHER + OWM.SUN));
                         loadedWeatherData.add(this);
                         return true;
                     })

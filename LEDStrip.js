@@ -32,6 +32,7 @@ class LEDStrip {
 
     set(i, r, g, b, render = false) {
         if (i < 0 || i >= this.len) throw new RangeError('Index out of bounds');
+        if (typeof r.r === 'number' && typeof r.g === 'number' && typeof r.b === 'number') return this.set(i, r.r, r.g, r.b);
         if (typeof i !== 'number' || typeof r !== 'number' || typeof g !== 'number' || typeof b !== 'number') throw TypeError('Parameter not a number');
         i = Math.round(i);
         r = Math.round(Math.min(Math.max(0, r), 255));

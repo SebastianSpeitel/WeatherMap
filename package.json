@@ -16,6 +16,9 @@
     "LED",
     "ws281x"
   ],
+  "bin": {
+    "raspi-weathermap": "./cli.js"
+  },
   "license": "MIT",
   "main": "weatherMap.js",
   "name": "raspi-weathermap",
@@ -26,5 +29,5 @@
     "type": "git",
     "url": "https://github.com/SebastianSpeitel/WeatherMap.git"
   },
-  "version": "0.0.2"
+  "version": "0.0.3"
 }
